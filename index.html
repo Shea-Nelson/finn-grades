@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Finn's School Year</title>
+  <meta name="description" content="Finn's 8th grade year: class averages, assignment trends, attendance, and weekly Roblox hours.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,560&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script>document.documentElement.classList.add("js");</script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <nav class="nav" aria-label="Sections">
+    <div class="wrap nav-row">
+      <a class="brand" href="#overview">Finn</a>
+      <div class="nav-links">
+        <a href="#overview" aria-current="true">Overview</a>
+        <a href="#roblox">Grades &amp; Roblox</a>
+        <a href="#history">Since 2020</a>
+        <a href="#trends">By class</a>
+        <a href="#insights">Insights</a>
+        <a href="#categories">Categories</a>
+        <a href="#assignments">Assignments</a>
+        <a href="#timeline">Notes</a>
+        <a href="#attendance">Attendance</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <div id="error" class="banner" hidden role="alert"></div>
+
+    <header class="hero" id="overview">
+      <div class="blob b1" aria-hidden="true"></div>
+      <div class="blob b2" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="eyebrow">8th grade · <span id="year-label">2026–27</span></p>
+        <div class="hero-top">
+          <div>
+            <h1 id="page-title">Finn's School Year</h1>
+            <p class="lede" id="lede">Loading the gradebook…</p>
+            <p class="range-line" id="range-line"></p>
+          </div>
+          <div class="hero-mark" aria-hidden="true">
+            <svg viewBox="0 0 180 140" width="180" height="140">
+              <ellipse cx="90" cy="118" rx="62" ry="10" fill="#fdba74" opacity=".45"/>
+              <rect x="48" y="28" width="84" height="96" rx="10" fill="#fff" stroke="#1c1917" stroke-width="2.5"/>
+              <path d="M48 44h84" stroke="#fed7aa" stroke-width="8"/>
+              <path d="M62 68h56M62 82h40M62 96h48" stroke="#1c1917" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+              <circle cx="132" cy="36" r="18" fill="#fbbf24" stroke="#1c1917" stroke-width="2.5"/>
+              <path d="M132 12v6M132 54v6M150 36h6M108 36h-6M145 23l4-4M119 49l-4 4M145 49l4 4M119 23l-4-4" stroke="#1c1917" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div id="kpis" class="kpi-grid" aria-label="At a glance"></div>
+        <div id="class-cards" class="class-grid"></div>
+        <p class="jump"><a href="#roblox">Grades next to weekly Roblox hours</a></p>
+      </div>
+    </header>
+
+    <section id="roblox" class="reveal" aria-labelledby="roblox-title">
+      <div class="wrap">
+        <p class="kicker">Week by week</p>
+        <h2 id="roblox-title">Grades and Roblox hours</h2>
+        <p class="sub" id="roblox-sub"></p>
+        <div class="split">
+          <div class="card chart-card">
+            <div class="chart-box" id="roblox-box">
+              <canvas id="roblox-chart" role="img" aria-labelledby="roblox-title"></canvas>
+            </div>
+            <div class="chip-row" id="roblox-chips" role="group" aria-label="Chart series"></div>
+            <p class="fine" id="roblox-method"></p>
+          </div>
+          <aside class="card correlation" id="correlation" aria-live="polite"></aside>
+        </div>
+        <div class="report-grid" id="roblox-reports"></div>
+        <details class="fold">
+          <summary>View the weekly numbers</summary>
+          <div class="table-wrap" id="roblox-table"></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="history" class="reveal" aria-labelledby="history-title">
+      <div class="wrap">
+        <p class="kicker">Bonus</p>
+        <h2 id="history-title">Roblox on the Windows PC since 2020</h2>
+        <p class="sub" id="history-sub"></p>
+        <div class="card chart-card">
+          <div class="chart-box" id="history-box">
+            <canvas id="history-chart" role="img" aria-labelledby="history-title"></canvas>
+          </div>
+          <p class="fine" id="history-note"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="trends" class="reveal" aria-labelledby="trends-title">
+      <div class="wrap">
+        <p class="kicker">Each class</p>
+        <h2 id="trends-title">Grades over time</h2>
+        <p class="sub" id="trends-sub"></p>
+        <div class="chip-row" id="trend-chips" role="group" aria-label="Classes on the chart"></div>
+        <div class="card chart-card">
+          <div class="chart-box" id="trend-box">
+            <canvas id="trend-chart" role="img" aria-labelledby="trends-title"></canvas>
+          </div>
+        </div>
+        <div id="sparks" class="spark-grid"></div>
+        <details class="fold">
+          <summary>View class summary numbers</summary>
+          <div class="table-wrap" id="trend-table"></div>
+        </details>
+      </div>
+    </section>
+
+    <section id="insights" class="reveal" aria-labelledby="insights-title">
+      <div class="wrap">
+        <p class="kicker">From the gradebook</p>
+        <h2 id="insights-title">What stands out</h2>
+        <p class="sub">These notes are calculated from the current files, so they change when new grades arrive.</p>
+        <div id="insight-grid" class="insight-grid"></div>
+      </div>
+    </section>
+
+    <section id="categories" class="reveal" aria-labelledby="cat-title">
+      <div class="wrap">
+        <p class="kicker">Weights</p>
+        <h2 id="cat-title">Where the points go</h2>
+        <p class="sub" id="cat-lead"></p>
+        <div class="toolbar" id="cat-toolbar"></div>
+        <div class="card chart-card">
+          <div class="chart-box" id="cat-box">
+            <canvas id="cat-chart" role="img" aria-labelledby="cat-title"></canvas>
+          </div>
+          <p class="fine" id="cat-note"></p>
+        </div>
+        <div id="cat-cards" class="cat-grid"></div>
+      </div>
+    </section>
+
+    <section id="assignments" class="reveal" aria-labelledby="assign-title">
+      <div class="wrap">
+        <p class="kicker">Gradebook</p>
+        <h2 id="assign-title">Every assignment</h2>
+        <p class="sub" id="assign-sub"></p>
+        <div class="scale" id="assign-scale" aria-hidden="true"></div>
+        <div id="heat"></div>
+        <div class="filters" id="filters">
+          <label class="grow">Search
+            <input id="q" type="search" placeholder="Title, class, note…" autocomplete="off">
+          </label>
+          <label>Class
+            <select id="f-class"></select>
+          </label>
+          <label>Term
+            <select id="f-term"></select>
+          </label>
+          <label>Category
+            <select id="f-cat"></select>
+          </label>
+          <label>Status
+            <select id="f-flag">
+              <option value="all">All</option>
+              <option value="missing">Missing</option>
+              <option value="late">Late</option>
+              <option value="incomplete">Incomplete</option>
+              <option value="zero">Zero</option>
+              <option value="under70">Under 70</option>
+              <option value="ungraded">Not graded</option>
+              <option value="noted">Has a teacher note</option>
+            </select>
+          </label>
+          <label>Sort
+            <select id="f-sort">
+              <option value="newest">Newest due date</option>
+              <option value="oldest">Oldest due date</option>
+              <option value="low">Lowest score</option>
+              <option value="high">Highest score</option>
+              <option value="class">Class name</option>
+            </select>
+          </label>
+        </div>
+        <p id="assign-count" class="count" aria-live="polite"></p>
+        <div id="assign-list" class="assign-list"></div>
+      </div>
+    </section>
+
+    <section id="timeline" class="reveal" aria-labelledby="time-title">
+      <div class="wrap">
+        <p class="kicker">In date order</p>
+        <h2 id="time-title">Notes, behavior, and attendance</h2>
+        <p class="sub" id="time-sub"></p>
+        <div class="chip-row" id="time-chips" role="group" aria-label="Timeline filters"></div>
+        <ol class="timeline" id="timeline-list"></ol>
+      </div>
+    </section>
+
+    <section id="attendance" class="reveal" aria-labelledby="att-title">
+      <div class="wrap">
+        <p class="kicker">Showing up</p>
+        <h2 id="att-title">Attendance</h2>
+        <p class="sub" id="att-sub"></p>
+        <div id="att-kpis" class="kpi-grid"></div>
+        <div class="scale" id="att-scale"></div>
+        <div id="att-heat"></div>
+        <div id="att-detail" class="card detail-card" hidden></div>
+        <div class="table-wrap" id="att-table"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p id="updated-line">Data from the school portal, last updated <span id="updated">…</span></p>
+      <p class="fine" id="footer-note"></p>
+    </div>
+  </footer>
+
+  <noscript>
+    <p class="banner">This page needs JavaScript to load the gradebook files.</p>
+  </noscript>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js" defer></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
