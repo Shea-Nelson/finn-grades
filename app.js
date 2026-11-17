@@ -1385,14 +1385,17 @@
     return { avg: hit.avg, n: hit.n };
   }
 
+  function emailReports(model) {
+    return model.placed.filter((report) => !report.primary && report.hours != null);
+  }
+
   function correlationFor(model, subject) {
     const overlap = [];
     model.weeks.forEach((week) => {
       const grade = subjectGrade(week, subject);
-      const windows = model.placed.filter((report) => report.primary && report.weekKey === week.key && report.hours != null);
-      if (!grade || !windows.length) return;
-      const emails = model.placed.filter((report) => !report.primary && report.weekKey === week.key && report.hours != null);
-      overlap.push({ week, grade, hours: windows[0].hours, chosen: windows[0], emails });
+      const emails = emailReports(model).filter((report) => report.weekKey === week.key);
+      if (!grade || !emails.length) return;
+      overlap.push({ week, grade, hours: emails[0].hours, chosen: emails[0] });
     });
     const n = overlap.length;
     const r = n >= 4 ? pearson(overlap.map((item) => item.hours), overlap.map((item) => item.grade.avg)) : null;
@@ -1401,8 +1404,8 @@
 
   function renderRoblox(model) {
     state.robloxSubject = "all";
-    document.getElementById("roblox-sub").textContent = "This school year only, August 2026 on. One grade line at a time: all classes, or a single subject. Windows PC hours and all-devices hours stay on the chart as separate bars.";
-    document.getElementById("roblox-method").textContent = "The grade line uses the ISO week of each due date. Family Safety weeks are drawn on the Monday–Sunday week that contains most of their days. A blank PC total means Roblox was not in the top apps, so it is left unknown rather than set to zero. Each all-devices email is the 7 days ending the day before it arrived. Dates are ET.";
+    document.getElementById("roblox-sub").textContent = "This school year only, August 2026 on. One grade line at a time: all classes, or a single subject. Bars are Roblox parent emails, all devices.";
+    document.getElementById("roblox-method").textContent = "Each email is the 7 days ending the day before it arrived, placed on the Monday–Sunday week that contains most of those days. Roblox only sends a report in weeks with play, and the emails start mid-September. A week with no email has no bar, not a zero. Dates are ET.";
     renderRobloxChart(model);
     renderRobloxSelector(model);
     renderRobloxAside(model, "all");
@@ -1421,11 +1424,11 @@
     }
     const labels = model.weeks.map((week) => week.label);
     const datasets = [];
-    const sources = uniqueSources(model);
+    const sources = emailReports(model).filter((report, index, list) => list.findIndex((item) => item.source === report.source) === index);
     sources.forEach((source) => {
       datasets.push({
         type: "bar",
-        label: source.name,
+        label: "Roblox email",
         data: model.weeks.map((week) => {
           const hit = model.placed.find((report) => report.source === source.source && report.weekKey === week.key);
           return hit && hit.hours != null ? Math.round(hit.hours * 100) / 100 : null;
@@ -1460,7 +1463,7 @@
       order: 0
     });
     const bounds = gradeBounds(model.weeks.map((week) => week.overall));
-    const hourValues = model.placed.map((report) => report.hours).filter((hours) => hours != null);
+    const hourValues = emailReports(model).map((report) => report.hours);
     const maxHours = Math.max(5, ...hourValues, 0);
     try {
       state.charts.roblox = mountChart(canvas, {
@@ -1544,7 +1547,7 @@
     const cls = model.classes.find((item) => item.name === subject);
     const gradeColor = cls ? cls.color : "#1c1917";
     const gradeLabel = subject === "all" ? "All classes" : subject;
-    const bars = uniqueSources(model).map((source) => `<span><i class="swatch" style="--c:${source.color}"></i>${esc(source.name)}</span>`).join("");
+    const bars = `<span><i class="swatch" style="--c:#7c3aed"></i>Roblox email</span>`;
     document.getElementById("roblox-legend").innerHTML = `<span><i class="swatch" style="--c:${gradeColor}"></i>${esc(gradeLabel)}</span>${bars}`;
   }
 
@@ -1581,9 +1584,10 @@
     canvas.dataset.overlap = String(stats.n);
     canvas.dataset.subject = subject;
     document.body.dataset.overlap = String(stats.n);
+    document.body.dataset.pearson = stats.r == null ? "" : String(stats.r);
     canvas.setAttribute("aria-label", stats.n < 4
-      ? `Roblox hours and ${who} for this school year. Correlation is hidden because only ${stats.n} of 4 overlapping weeks are available.`
-      : `Roblox hours and ${who} for this school year. Correlation r is ${stats.r == null ? "not defined" : stats.r.toFixed(2)} across ${stats.n} weeks.`);
+      ? `Roblox email hours and ${who} for this school year. Correlation is hidden because only ${stats.n} of 4 overlapping weeks are available.`
+      : `Roblox email hours and ${who} for this school year. Correlation r is ${stats.r.toFixed(2)} across ${stats.n} weeks.`);
   }
 
   function renderRobloxAside(model, subject) {
@@ -1602,24 +1606,18 @@
       const mag = Math.abs(r);
       const strength = mag < 0.2 ? "little linear relationship" : mag < 0.4 ? "a weak link" : mag < 0.7 ? "a moderate link" : "a strong link";
       if (mag < 0.2) {
-        paragraphs.push(`There is little linear relationship between Windows PC hours and ${who}.`);
+        paragraphs.push(`There is little linear relationship between Roblox email hours and ${who}.`);
       } else {
         const direction = r < 0
-          ? `More Windows PC Roblox hours line up with a lower ${subject === "all" ? "weekly average" : subject + " average"}`
-          : `More Windows PC Roblox hours line up with a higher ${subject === "all" ? "weekly average" : subject + " average"}`;
+          ? `More Roblox hours line up with a lower ${subject === "all" ? "weekly average" : subject + " average"}`
+          : `More Roblox hours line up with a higher ${subject === "all" ? "weekly average" : subject + " average"}`;
         paragraphs.push(`${direction} (${strength}).`);
       }
       paragraphs.push("Correlation is not causation, and this is a small sample.");
-      paragraphs.push(`r uses Windows PC hours and ${who}. Weeks with no grade for this selection are skipped. All-devices totals stay on the chart and are not part of r.`);
+      paragraphs.push(`r uses only weeks that have both a Roblox email and a grade for ${subject === "all" ? "all classes" : subject}. Weeks with no email are skipped, not counted as zero.`);
     }
-    const blankWeeks = model.placed.filter((report) => report.primary && report.unknown).length;
-    if (blankWeeks) {
-      paragraphs.push(`${plural(blankWeeks, "Windows week")} ${blankWeeks === 1 ? "is" : "are"} blank because Roblox was not in the top apps. ${blankWeeks === 1 ? "That week is" : "Those weeks are"} left out of r, not counted as zero.`);
-    }
-    if (model.placed.some((report) => report.inferred)) {
-      paragraphs.push("All-devices emails do not list dates. Each one is the 7 days ending the day before the email arrived.");
-    }
-    const meter = n < 4 ? `<div class="meter" role="img" aria-label="${n} of 4 weeks with both a grade and Windows PC hours"><span style="width:${Math.max(6, (n / 4) * 100)}%"></span></div>` : "";
+    paragraphs.push("Roblox only sends a report in weeks with play, and the emails start mid-September.");
+    const meter = n < 4 ? `<div class="meter" role="img" aria-label="${n} of 4 weeks with both a grade and a Roblox email"><span style="width:${Math.max(6, (n / 4) * 100)}%"></span></div>` : "";
     const table = overlapTable(stats, subject || "all");
     document.getElementById("correlation").innerHTML = `
       <h3>${esc(heading)}</h3>
@@ -1627,7 +1625,7 @@
       ${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}
       ${table}
       <details class="fold"><summary>How correlation is calculated</summary>
-        <p class="fine">Pearson r compares ${esc(who)} with Windows PC Roblox hours on this school year’s weeks that have both. It runs from −1 to 1. Weeks with no grade for this selection are skipped, and blank PC weeks are not treated as zero. All-devices hours are never added in.</p>
+        <p class="fine">Pearson r compares ${esc(who)} with Roblox email hours on this school year’s weeks that have both. It runs from −1 to 1. Weeks with no grade for this selection, or no email, are skipped. A missing email is not a zero.</p>
       </details>`;
     document.getElementById("correlation").dataset.overlap = String(n);
   }
@@ -1635,16 +1633,12 @@
   function overlapTable(stats, subject) {
     if (!stats.overlap.length) return "";
     const gradeHeader = subject === "all" ? "All classes" : subject;
-    const rows = stats.overlap.map((item) => {
-      const email = item.emails && item.emails[0];
-      return [
-        item.week.title,
-        fmtGrade(item.grade.avg),
-        formatMinutes(item.chosen.roblox_total_min),
-        email ? formatMinutes(email.roblox_total_min) : "—"
-      ];
-    });
-    return `<div class="table-wrap">${tableHTML("School weeks in the correlation", ["Week", gradeHeader, "Windows PC", "All devices"], rows)}</div>`;
+    const rows = stats.overlap.map((item) => [
+      item.week.title,
+      fmtGrade(item.grade.avg),
+      formatMinutes(item.chosen.roblox_total_min)
+    ]);
+    return `<div class="table-wrap">${tableHTML("School weeks in the correlation", ["Week", gradeHeader, "Roblox hours"], rows)}</div>`;
   }
 
   function tableHTML(caption, headers, rows) {
@@ -1652,12 +1646,9 @@
   }
 
   function renderRobloxReports(model) {
-    const windows = model.placed.filter((report) => report.primary);
-    const known = windows.filter((report) => report.hours != null).length;
-    const unknown = windows.length - known;
-    const reports = model.placed.filter((report) => !report.primary && report.hours != null);
+    const reports = emailReports(model);
     const sharedCaution = reports.some((report) => /shifted|verified/i.test(report.notes || ""));
-    const intro = `<p class="fine" style="grid-column:1/-1">${known} Windows PC ${known === 1 ? "week" : "weeks"} since August ${known === 1 ? "has" : "have"} a Roblox total.${unknown ? ` ${plural(unknown, "week")} ${unknown === 1 ? "is" : "are"} blank, not zero.` : ""} All-devices emails are listed below.${sharedCaution ? " Those notes say some day-of-week labels have looked shifted, so the totals here follow the hours column." : ""}</p>`;
+    const intro = `<p class="fine" style="grid-column:1/-1">Roblox parent emails for this school year. Each total is all devices for the 7 days ending the day before the email arrived.${sharedCaution ? " Some day-of-week labels in the emails have looked shifted, so the totals here follow the hours column." : ""}</p>`;
     document.getElementById("roblox-reports").innerHTML = intro + reports.map((report) => {
       const caution = !sharedCaution && /shifted|verified/i.test(report.notes || "");
       const note = caution || sharedCaution ? "" : scrubId(report.notes || "");
@@ -1686,15 +1677,16 @@
 
   function renderRobloxTable(model, subject) {
     const gradeHeader = subject === "all" ? "All classes" : subject;
-    const headers = ["Week", gradeHeader, "Assignments", ...uniqueSources(model).map((source) => source.name)];
+    const headers = ["Week", gradeHeader, "Assignments", "Roblox hours"];
     const rows = model.weeks.map((week) => {
       const grade = subjectGrade(week, subject);
-      const cells = [week.title, grade ? fmtGrade(grade.avg) : "—", grade ? String(grade.n) : "0"];
-      uniqueSources(model).forEach((source) => {
-        const hit = model.placed.find((report) => report.source === source.source && report.weekKey === week.key);
-        cells.push(hit && hit.hours != null ? formatMinutes(hit.roblox_total_min) : "—");
-      });
-      return cells;
+      const hit = emailReports(model).find((report) => report.weekKey === week.key);
+      return [
+        week.title,
+        grade ? fmtGrade(grade.avg) : "—",
+        grade ? String(grade.n) : "0",
+        hit ? formatMinutes(hit.roblox_total_min) : "—"
+      ];
     });
     document.getElementById("roblox-table").innerHTML = rows.length
       ? tableHTML(`Weekly ${gradeHeader} average and Roblox hours`, headers, rows)
@@ -2685,7 +2677,6 @@
       renderAll(MODEL);
       document.body.dataset.ready = "true";
       document.body.dataset.assignments = String(MODEL.assignments.length);
-      document.body.dataset.overlap = String(MODEL.correlationN);
     } catch (error) {
       const box = document.getElementById("error");
       box.hidden = false;
