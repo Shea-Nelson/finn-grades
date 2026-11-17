@@ -33,6 +33,7 @@
   };
 
   let MODEL = null;
+  let tableSeq = 0;
 
   function esc(value) {
     return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -79,7 +80,9 @@
   }
 
   function plural(count, word) {
-    return `${count} ${word}${count === 1 ? "" : "s"}`;
+    if (count === 1) return `${count} ${word}`;
+    const irregular = { class: "classes", tardy: "tardies" };
+    return `${count} ${irregular[word] || `${word}s`}`;
   }
 
   function joinAnd(items) {
@@ -203,7 +206,7 @@
   }
 
   function spanWeeks(keys) {
-    const sorted = [...keys].filter(Boolean).sort();
+    const sorted = [...keys].filter(Boolean).toSorted();
     if (!sorted.length) return [];
     const all = [];
     let cursor = sorted[0];
@@ -610,8 +613,7 @@
   function buildHistory(robloxRows) {
     const dated = robloxRows
       .filter((row) => row.source === "microsoft_family_safety" && row.period_start && row.period_end)
-      .slice()
-      .sort((a, b) => a.period_start.localeCompare(b.period_start));
+      .toSorted((a, b) => a.period_start.localeCompare(b.period_start));
     const points = [];
     let prevEnd = "";
     dated.forEach((row) => {
@@ -630,7 +632,7 @@
     });
     const known = dated.filter((row) => row.roblox_total_min != null);
     const multi = dated.filter((row) => /more than one/i.test(row.notes || ""));
-    const peak = known.slice().sort((a, b) => b.roblox_total_min - a.roblox_total_min)[0] || null;
+    const peak = known.toSorted((a, b) => b.roblox_total_min - a.roblox_total_min)[0] || null;
     return {
       points,
       known: known.length,
@@ -960,7 +962,7 @@
   function buildInsights(model) {
     const cards = [];
     const term = shortTerm(model.termName);
-    const ranked = model.classes.filter((cls) => cls.currentAvg != null).slice().sort((a, b) => b.currentAvg - a.currentAvg);
+    const ranked = model.classes.filter((cls) => cls.currentAvg != null).toSorted((a, b) => b.currentAvg - a.currentAvg);
     if (ranked.length) {
       const high = ranked[0];
       const low = ranked[ranked.length - 1];
@@ -974,7 +976,7 @@
       cards.push({ tone: letters.every((item) => item === "A" || item === "B") ? "good" : "watch", kicker: "Classes", title: "Highest and lowest", paragraphs });
     }
 
-    const movers = model.classes.filter((cls) => cls.delta != null).slice().sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+    const movers = model.classes.filter((cls) => cls.delta != null).toSorted((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
     if (movers.length) {
       const top = movers[0];
       const opposite = movers.find((cls) => Math.sign(cls.delta) !== Math.sign(top.delta) && Math.abs(cls.delta) >= 0.5);
@@ -1016,7 +1018,7 @@
         if (missing.length) paragraphs.push(`${joinAnd(missing)} ${missing.length === 1 ? "is" : "are"} not scored yet, so the graded weights are stretched to fill the average.`);
       }
       const peers = categoryParts(best.cls, model.termName).filter((part) => part.scored && part.category !== best.part.category);
-      const stronger = peers.slice().sort((a, b) => b.category_average - a.category_average)[0];
+      const stronger = peers.toSorted((a, b) => b.category_average - a.category_average)[0];
       if (stronger && stronger.category_average - best.part.category_average >= 8) {
         paragraphs.push(`${stronger.category} in the same class ${stronger.category.endsWith("s") ? "are" : "is"} ${fmtGrade(stronger.category_average)}.`);
       }
@@ -1075,10 +1077,10 @@
     } else {
       const counts = new Map();
       model.under70.forEach((row) => counts.set(row.class, (counts.get(row.class) || 0) + 1));
-      const countText = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name, count]) => `${name} has ${count}`);
+      const countText = [...counts.entries()].toSorted((a, b) => b[1] - a[1]).map(([name, count]) => `${name} has ${count}`);
       const lowest = [];
       const seen = new Set();
-      model.under70.slice().sort((a, b) => a.percent - b.percent || a.due_date.localeCompare(b.due_date)).forEach((row) => {
+      model.under70.toSorted((a, b) => a.percent - b.percent || a.due_date.localeCompare(b.due_date)).forEach((row) => {
         const key = `${row.class}|${splitTitle(row.assignment_name).title}|${row.percent}`;
         if (seen.has(key) || lowest.length >= 3) return;
         seen.add(key);
@@ -1124,8 +1126,8 @@
       return { day, n: values.length, avg: mean(values) };
     }).filter((day) => day.n >= 15 && day.avg != null);
     if (days.length >= 3) {
-      const hi = days.slice().sort((a, b) => b.avg - a.avg)[0];
-      const lo = days.slice().sort((a, b) => a.avg - b.avg)[0];
+      const hi = days.toSorted((a, b) => b.avg - a.avg)[0];
+      const lo = days.toSorted((a, b) => a.avg - b.avg)[0];
       if (hi.avg - lo.avg >= 4) {
         cards.push({
           tone: "info",
@@ -1254,7 +1256,7 @@
   }
 
   async function fetchText(url, required) {
-    const response = await fetch(url);
+    const response = await fetch(url, { priority: "high" });
     if (!response.ok) {
       if (required) throw new Error(`Could not load ${url} (${response.status}).`);
       return "";
@@ -1638,11 +1640,27 @@
       fmtGrade(item.grade.avg),
       formatMinutes(item.chosen.roblox_total_min)
     ]);
-    return `<div class="table-wrap">${tableHTML("School weeks in the correlation", ["Week", gradeHeader, "Roblox hours"], rows)}</div>`;
+    tableSeq += 1;
+    const captionId = `table-caption-${tableSeq}`;
+    return `<div class="table-wrap" tabindex="0" role="region" aria-labelledby="${captionId}">${tableHTML("School weeks in the correlation", ["Week", gradeHeader, "Roblox hours"], rows, captionId)}</div>`;
   }
 
-  function tableHTML(caption, headers, rows) {
-    return `<table><caption class="sr-only">${esc(caption)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${esc(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${esc(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  function tableHTML(caption, headers, rows, captionId) {
+    const idAttr = captionId ? ` id="${esc(captionId)}"` : "";
+    const body = rows.map((row) => `<tr>${row.map((cell, index) => {
+      if (index === 0) return `<th scope="row">${esc(cell)}</th>`;
+      return `<td>${esc(cell)}</td>`;
+    }).join("")}</tr>`).join("");
+    return `<table><caption${idAttr} class="sr-only">${esc(caption)}</caption><thead><tr>${headers.map((header) => `<th scope="col">${esc(header)}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>`;
+  }
+
+  function mountTable(el, caption, headers, rows) {
+    tableSeq += 1;
+    const captionId = `table-caption-${tableSeq}`;
+    el.innerHTML = tableHTML(caption, headers, rows, captionId);
+    el.tabIndex = 0;
+    el.setAttribute("role", "region");
+    el.setAttribute("aria-labelledby", captionId);
   }
 
   function renderRobloxReports(model) {
@@ -1688,9 +1706,18 @@
         hit ? formatMinutes(hit.roblox_total_min) : "—"
       ];
     });
-    document.getElementById("roblox-table").innerHTML = rows.length
-      ? tableHTML(`Weekly ${gradeHeader} average and Roblox hours`, headers, rows)
-      : "<p>No dated assignments yet.</p>";
+    const host = document.getElementById("roblox-table");
+    if (!rows.length) {
+      host.replaceChildren();
+      const empty = document.createElement("p");
+      empty.textContent = "No dated assignments yet.";
+      host.append(empty);
+      host.removeAttribute("role");
+      host.removeAttribute("aria-labelledby");
+      host.removeAttribute("tabindex");
+      return;
+    }
+    mountTable(host, `Weekly ${gradeHeader} average and Roblox hours`, headers, rows);
   }
 
   function uniqueSources(model) {
@@ -1845,7 +1872,7 @@
       box.insertAdjacentHTML("beforeend", '<p class="fine">Charts could not load. The class cards still show the official averages.</p>');
       return;
     }
-    const dates = model.assignments.map((row) => row.due_date).filter(Boolean).sort();
+    const dates = model.assignments.map((row) => row.due_date).filter(Boolean).toSorted();
     const datasets = model.classes.map((cls) => ({
       label: cls.name,
       data: model.running.get(cls.name) || [],
@@ -2007,7 +2034,8 @@
         ys.length ? fmtGrade(Math.max(...ys)) : "—"
       ];
     });
-    document.getElementById("trend-table").innerHTML = tableHTML(
+    mountTable(
+      document.getElementById("trend-table"),
       "Official term averages and year-to-date lines",
       ["Class", "Prior term", "Current", "Change", "Line ends", "Lowest line", "Highest line"],
       rows
@@ -2051,8 +2079,7 @@
     const term = state.termName;
     const rows = model.classes
       .filter((cls) => cls.terms?.[term]?.term_average?.numeric != null)
-      .slice()
-      .sort((a, b) => a.terms[term].term_average.numeric - b.terms[term].term_average.numeric);
+      .toSorted((a, b) => a.terms[term].term_average.numeric - b.terms[term].term_average.numeric);
     const lead = categoryLead(rows, term);
     document.getElementById("cat-lead").textContent = lead;
     document.getElementById("cat-note").textContent = state.catView === "bars"
@@ -2271,7 +2298,7 @@
     fillSelect("f-term", terms, "All terms");
     const preferred = ["Daily Work", "Quizzes", "Tests", "Weekly"];
     const present = [...new Set(model.assignments.map((row) => row.category))];
-    const categories = [...preferred.filter((item) => present.includes(item)), ...present.filter((item) => !preferred.includes(item)).sort()];
+    const categories = [...preferred.filter((item) => present.includes(item)), ...present.filter((item) => !preferred.includes(item)).toSorted()];
     fillSelect("f-cat", categories, "All categories");
     document.getElementById("heat").innerHTML = calendarHTML(model, "grades");
     document.getElementById("heat").addEventListener("click", (event) => {
@@ -2429,15 +2456,13 @@
   }
 
   function sortAssignments(list) {
-    const copy = list.slice();
-    copy.sort((a, b) => {
+    return list.toSorted((a, b) => {
       if (state.sort === "oldest") return a.due_date.localeCompare(b.due_date) || a.index - b.index;
       if (state.sort === "low") return (a.percent ?? 9999) - (b.percent ?? 9999) || a.index - b.index;
       if (state.sort === "high") return (b.percent ?? -1) - (a.percent ?? -1) || a.index - b.index;
       if (state.sort === "class") return a.class.localeCompare(b.class) || b.due_date.localeCompare(a.due_date);
       return b.due_date.localeCompare(a.due_date) || b.index - a.index;
     });
-    return copy;
   }
 
   function renderAssignList() {
@@ -2594,14 +2619,20 @@
       joinAnd([...new Set(group.classes)]),
       [...new Set(group.comments)].join(" ") || "—"
     ]);
-    document.getElementById("att-table").innerHTML = `<h3 style="margin:16px 0 8px">Every mark</h3>${tableHTML("Attendance marks", ["Date", "What", "Classes", "Note"], rows)}`;
+    const host = document.getElementById("att-table");
+    tableSeq += 1;
+    const captionId = `table-caption-${tableSeq}`;
+    host.innerHTML = `<h3 class="table-heading">Every mark</h3>${tableHTML("Attendance marks", ["Date", "What", "Classes", "Note"], rows, captionId)}`;
+    host.tabIndex = 0;
+    host.setAttribute("role", "region");
+    host.setAttribute("aria-labelledby", captionId);
   }
 
   function renderAttendanceDetail() {
     const box = document.getElementById("att-detail");
     if (!state.attDate) {
       box.hidden = true;
-      box.innerHTML = "";
+      box.replaceChildren();
       return;
     }
     const groups = MODEL.attendanceGroups.filter((group) => group.date === state.attDate);
@@ -2648,13 +2679,34 @@
   function setupNav() {
     const links = [...document.querySelectorAll(".nav-links a")];
     const sections = links.map((link) => document.querySelector(link.getAttribute("href"))).filter(Boolean);
+    const mark = (id) => {
+      links.forEach((link) => {
+        const on = Boolean(id) && link.getAttribute("href") === `#${id}`;
+        link.classList.toggle("target-current", on);
+        link.setAttribute("aria-current", on ? "true" : "false");
+      });
+    };
+    const supportsNative = typeof CSS !== "undefined"
+      && typeof CSS.supports === "function"
+      && CSS.supports("scroll-target-group", "auto")
+      && "onscrollend" in window;
+    if (supportsNative) {
+      const sync = () => {
+        const current = document.querySelector(".nav-links a:target-current");
+        if (!current) return;
+        links.forEach((link) => {
+          link.setAttribute("aria-current", link === current ? "true" : "false");
+        });
+      };
+      sync();
+      document.addEventListener("scrollend", sync);
+      return;
+    }
     if (!("IntersectionObserver" in window)) return;
     const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      const visible = entries.filter((entry) => entry.isIntersecting).toSorted((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
       if (!visible) return;
-      links.forEach((link) => {
-        link.setAttribute("aria-current", link.getAttribute("href") === `#${visible.target.id}` ? "true" : "false");
-      });
+      mark(visible.target.id);
     }, { rootMargin: "-30% 0px -55% 0px", threshold: [0.1, 0.25, 0.5] });
     sections.forEach((section) => observer.observe(section));
   }
@@ -2664,7 +2716,7 @@
       selfCheck();
       const [assignText, summary, robloxText] = await Promise.all([
         fetchText("data/assignments.csv", true),
-        fetch("data/summary.json").then((response) => {
+        fetch("data/summary.json", { priority: "high" }).then((response) => {
           if (!response.ok) throw new Error(`Could not load data/summary.json (${response.status}).`);
           return response.json();
         }),

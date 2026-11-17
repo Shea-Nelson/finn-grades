@@ -4,46 +4,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="theme-color" content="#fff8f1">
   <title>Finn's School Year</title>
   <meta name="description" content="Finn's 8th grade year: class averages, assignment trends, attendance, and weekly Roblox hours.">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,560&family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,650;1,9..144,560&family=Inter:wght@400;500;600;700&display=swap" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="styles.css">
   <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-  <a class="skip" href="#main">Skip to content</a>
+  <a class="skip" href="#page-title">Skip to content</a>
   <nav class="nav" aria-label="Sections">
     <div class="wrap nav-row">
       <a class="brand" href="#overview">Finn</a>
-      <div class="nav-links">
-        <a href="#overview" aria-current="true">Overview</a>
-        <a href="#roblox">Grades &amp; Roblox</a>
-        <a href="#history">Since 2020</a>
-        <a href="#trends">By class</a>
-        <a href="#insights">Insights</a>
-        <a href="#categories">Categories</a>
-        <a href="#assignments">Assignments</a>
-        <a href="#timeline">Notes</a>
-        <a href="#attendance">Attendance</a>
-      </div>
+      <ul class="nav-links">
+        <li><a href="#overview" aria-current="true">Overview</a></li>
+        <li><a href="#roblox">Grades &amp; Roblox</a></li>
+        <li><a href="#history">Since 2020</a></li>
+        <li><a href="#trends">By class</a></li>
+        <li><a href="#insights">Insights</a></li>
+        <li><a href="#categories">Categories</a></li>
+        <li><a href="#assignments">Assignments</a></li>
+        <li><a href="#timeline">Notes</a></li>
+        <li><a href="#attendance">Attendance</a></li>
+      </ul>
     </div>
   </nav>
 
   <main id="main">
+    <noscript>
+      <p class="banner">This page needs JavaScript to load the gradebook files.</p>
+    </noscript>
     <div id="error" class="banner" hidden role="alert"></div>
 
-    <header class="hero" id="overview">
+    <header class="hero" id="overview" tabindex="-1">
       <div class="blob b1" aria-hidden="true"></div>
       <div class="blob b2" aria-hidden="true"></div>
       <div class="wrap">
         <p class="eyebrow">8th grade · <span id="year-label">2026–27</span></p>
         <div class="hero-top">
           <div>
-            <h1 id="page-title">Finn's School Year</h1>
+            <h1 id="page-title" tabindex="-1">Finn's School Year</h1>
             <p class="lede" id="lede">Loading the gradebook…</p>
             <p class="range-line" id="range-line"></p>
           </div>
@@ -58,13 +63,14 @@
             </svg>
           </div>
         </div>
-        <div id="kpis" class="kpi-grid" aria-label="At a glance"></div>
+        <div id="kpis" class="kpi-grid"></div>
+        <h2 class="sr-only">Classes this term</h2>
         <div id="class-cards" class="class-grid"></div>
         <p class="jump"><a href="#roblox">Grades next to weekly Roblox hours</a></p>
       </div>
     </header>
 
-    <section id="roblox" class="reveal" aria-labelledby="roblox-title">
+    <section id="roblox" class="reveal" aria-labelledby="roblox-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Week by week</p>
         <h2 id="roblox-title">Grades and Roblox hours</h2>
@@ -88,7 +94,7 @@
       </div>
     </section>
 
-    <section id="history" class="reveal" aria-labelledby="history-title">
+    <section id="history" class="reveal" aria-labelledby="history-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Bonus</p>
         <h2 id="history-title">Roblox on the Windows PC since 2020</h2>
@@ -102,7 +108,7 @@
       </div>
     </section>
 
-    <section id="trends" class="reveal" aria-labelledby="trends-title">
+    <section id="trends" class="reveal" aria-labelledby="trends-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Each class</p>
         <h2 id="trends-title">Grades over time</h2>
@@ -121,7 +127,7 @@
       </div>
     </section>
 
-    <section id="insights" class="reveal" aria-labelledby="insights-title">
+    <section id="insights" class="reveal" aria-labelledby="insights-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">From the gradebook</p>
         <h2 id="insights-title">What stands out</h2>
@@ -130,7 +136,7 @@
       </div>
     </section>
 
-    <section id="categories" class="reveal" aria-labelledby="cat-title">
+    <section id="categories" class="reveal" aria-labelledby="cat-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Weights</p>
         <h2 id="cat-title">Where the points go</h2>
@@ -146,27 +152,27 @@
       </div>
     </section>
 
-    <section id="assignments" class="reveal" aria-labelledby="assign-title">
+    <section id="assignments" class="reveal" aria-labelledby="assign-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Gradebook</p>
         <h2 id="assign-title">Every assignment</h2>
         <p class="sub" id="assign-sub"></p>
         <div class="scale" id="assign-scale" aria-hidden="true"></div>
         <div id="heat"></div>
-        <div class="filters" id="filters">
-          <label class="grow">Search
-            <input id="q" type="search" placeholder="Title, class, note…" autocomplete="off">
+        <search class="filters" id="filters">
+          <label class="grow" for="q">Search
+            <input id="q" type="search" placeholder="Title, class, note…" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="search">
           </label>
-          <label>Class
+          <label for="f-class">Class
             <select id="f-class"></select>
           </label>
-          <label>Term
+          <label for="f-term">Term
             <select id="f-term"></select>
           </label>
-          <label>Category
+          <label for="f-cat">Category
             <select id="f-cat"></select>
           </label>
-          <label>Status
+          <label for="f-flag">Status
             <select id="f-flag">
               <option value="all">All</option>
               <option value="missing">Missing</option>
@@ -178,7 +184,7 @@
               <option value="noted">Has a teacher note</option>
             </select>
           </label>
-          <label>Sort
+          <label for="f-sort">Sort
             <select id="f-sort">
               <option value="newest">Newest due date</option>
               <option value="oldest">Oldest due date</option>
@@ -187,13 +193,13 @@
               <option value="class">Class name</option>
             </select>
           </label>
-        </div>
+        </search>
         <p id="assign-count" class="count" aria-live="polite"></p>
         <div id="assign-list" class="assign-list"></div>
       </div>
     </section>
 
-    <section id="timeline" class="reveal" aria-labelledby="time-title">
+    <section id="timeline" class="reveal" aria-labelledby="time-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">In date order</p>
         <h2 id="time-title">Notes, behavior, and attendance</h2>
@@ -203,7 +209,7 @@
       </div>
     </section>
 
-    <section id="attendance" class="reveal" aria-labelledby="att-title">
+    <section id="attendance" class="reveal" aria-labelledby="att-title" tabindex="-1">
       <div class="wrap">
         <p class="kicker">Showing up</p>
         <h2 id="att-title">Attendance</h2>
@@ -224,12 +230,8 @@
     </div>
   </footer>
 
-  <noscript>
-    <p class="banner">This page needs JavaScript to load the gradebook files.</p>
-  </noscript>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js" integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3" crossorigin="anonymous" referrerpolicy="no-referrer" fetchpriority="low" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js" integrity="sha384-cVMg8E3QFwTvGCDuK+ET4PD341jF3W8nO1auiXfuZNQkzbUUiBGLsIQUE+b1mxws" crossorigin="anonymous" referrerpolicy="no-referrer" fetchpriority="low" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
