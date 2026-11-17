@@ -28,6 +28,7 @@
     termName: "",
     catView: "bars",
     attDate: "",
+    robloxSubject: "all",
     charts: {}
   };
 
@@ -1375,20 +1376,39 @@
       </article>`).join("");
   }
 
+  function subjectGrade(week, subject) {
+    if (subject === "all") {
+      return week.overall == null ? null : { avg: week.overall, n: week.overallN };
+    }
+    const hit = week.byClass[subject];
+    if (!hit || hit.avg == null) return null;
+    return { avg: hit.avg, n: hit.n };
+  }
+
+  function correlationFor(model, subject) {
+    const overlap = [];
+    model.weeks.forEach((week) => {
+      const grade = subjectGrade(week, subject);
+      const windows = model.placed.filter((report) => report.primary && report.weekKey === week.key && report.hours != null);
+      if (!grade || !windows.length) return;
+      const emails = model.placed.filter((report) => !report.primary && report.weekKey === week.key && report.hours != null);
+      overlap.push({ week, grade, hours: windows[0].hours, chosen: windows[0], emails });
+    });
+    const n = overlap.length;
+    const r = n >= 4 ? pearson(overlap.map((item) => item.hours), overlap.map((item) => item.grade.avg)) : null;
+    return { n, r, overlap };
+  }
+
   function renderRoblox(model) {
-    document.getElementById("roblox-sub").textContent = "School weeks from August 2026 on. The grade line uses the due date’s ISO week. Windows PC hours are the main bars. All-devices email totals are the second set of bars, and they are not added to the PC hours.";
-    document.getElementById("roblox-method").textContent = "Family Safety weeks run across several days and are drawn on the Monday–Sunday week that contains most of them. A blank PC total means Roblox was not in the top apps, so it is left unknown rather than set to zero. Each all-devices email is treated as the 7 days ending the day before it arrived. Dates are ET.";
+    state.robloxSubject = "all";
+    document.getElementById("roblox-sub").textContent = "This school year only, August 2026 on. One grade line at a time: all classes, or a single subject. Windows PC hours and all-devices hours stay on the chart as separate bars.";
+    document.getElementById("roblox-method").textContent = "The grade line uses the ISO week of each due date. Family Safety weeks are drawn on the Monday–Sunday week that contains most of their days. A blank PC total means Roblox was not in the top apps, so it is left unknown rather than set to zero. Each all-devices email is the 7 days ending the day before it arrived. Dates are ET.";
     renderRobloxChart(model);
-    renderRobloxChips(model);
-    renderRobloxAside(model);
+    renderRobloxSelector(model);
+    renderRobloxAside(model, "all");
     renderRobloxReports(model);
-    renderRobloxTable(model);
-    const canvas = document.getElementById("roblox-chart");
-    const sentence = model.correlationN < 4
-      ? `Weekly average grade and Roblox hours. Correlation is hidden because only ${model.correlationN} of 4 overlapping weeks are available.`
-      : "Weekly average grade and Roblox hours, with a correlation for the overlapping weeks.";
-    canvas.setAttribute("aria-label", sentence);
-    canvas.dataset.overlap = String(model.correlationN);
+    renderRobloxTable(model, "all");
+    syncRobloxAria(model, "all");
   }
 
   function renderRobloxChart(model) {
@@ -1421,28 +1441,11 @@
         order: 3
       });
     });
-    model.classes.forEach((cls) => {
-      datasets.push({
-        type: "line",
-        label: cls.name,
-        data: model.weeks.map((week) => week.byClass[cls.name]?.avg ?? null),
-        counts: model.weeks.map((week) => week.byClass[cls.name]?.n || 0),
-        hidden: true,
-        yAxisID: "yGrade",
-        borderColor: cls.color,
-        backgroundColor: cls.color,
-        tension: 0.25,
-        spanGaps: true,
-        pointRadius: 2,
-        borderWidth: 2,
-        order: 1
-      });
-    });
     datasets.push({
       type: "line",
-      label: "Weekly average",
-      data: model.weeks.map((week) => week.overall),
-      counts: model.weeks.map((week) => week.overallN),
+      label: "All classes",
+      data: model.weeks.map((week) => subjectGrade(week, "all")?.avg ?? null),
+      counts: model.weeks.map((week) => subjectGrade(week, "all")?.n || 0),
       yAxisID: "yGrade",
       borderColor: "#1c1917",
       backgroundColor: "#ffffff",
@@ -1452,7 +1455,7 @@
       pointRadius: 3.5,
       pointHoverRadius: 6,
       tension: 0.28,
-      spanGaps: true,
+      spanGaps: false,
       borderWidth: 3,
       order: 0
     });
@@ -1520,69 +1523,94 @@
     }
   }
 
-  function renderRobloxChips(model) {
+  function renderRobloxSelector(model) {
     const row = document.getElementById("roblox-chips");
-    const chips = [`<button type="button" class="chip" data-series="Weekly average" aria-pressed="true"><span class="swatch" style="--c:#1c1917"></span>Weekly average</button>`];
-    chips.push('<button type="button" class="chip" data-series-group="classes" aria-pressed="false">All classes</button>');
-    model.classes.forEach((cls) => {
-      chips.push(`<button type="button" class="chip" data-series="${esc(cls.name)}" aria-pressed="false"><span class="swatch" style="--c:${cls.color}"></span>${esc(cls.name)}</button>`);
-    });
-    uniqueSources(model).forEach((source) => {
-      chips.push(`<button type="button" class="chip" data-series="${esc(source.name)}" aria-pressed="true" title="${esc(source.scope)}"><span class="swatch" style="--c:${source.color}"></span>${esc(source.name)}</button>`);
-    });
-    row.innerHTML = chips.join("");
+    const options = [{ name: "All classes", value: "all", color: "#1c1917" }].concat(
+      model.classes.map((cls) => ({ name: cls.name, value: cls.name, color: cls.color }))
+    );
+    row.innerHTML = options.map((option) => `
+      <button type="button" class="chip" data-roblox-class="${esc(option.value)}" aria-pressed="${option.value === "all" ? "true" : "false"}">
+        <span class="swatch" style="--c:${option.color}"></span>${esc(option.name)}
+      </button>`).join("");
     row.addEventListener("click", (event) => {
-      const chart = state.charts.roblox;
-      if (!chart) return;
-      const group = event.target.closest("[data-series-group]");
-      const button = group ? null : event.target.closest("[data-series]");
-      const classSets = () => chart.data.datasets.filter((dataset) => dataset.yAxisID === "yGrade" && dataset.label !== "Weekly average");
-      if (group) {
-        const sets = classSets();
-        const allOn = sets.every((dataset) => !dataset.hidden);
-        sets.forEach((dataset) => { dataset.hidden = allOn; });
-      } else if (button) {
-        const dataset = chart.data.datasets.find((item) => item.label === button.dataset.series);
-        if (!dataset) return;
-        dataset.hidden = !dataset.hidden;
-      } else return;
-      chart.data.datasets.forEach((dataset) => {
-        const chip = [...row.querySelectorAll("[data-series]")].find((item) => item.dataset.series === dataset.label);
-        if (chip) chip.setAttribute("aria-pressed", dataset.hidden ? "false" : "true");
-      });
-      const groupButton = row.querySelector("[data-series-group]");
-      if (groupButton) {
-        const sets = classSets();
-        groupButton.setAttribute("aria-pressed", sets.length && sets.every((dataset) => !dataset.hidden) ? "true" : "false");
-      }
-      applyGradeScale(chart, "yGrade");
-      chart.update();
+      const button = event.target.closest("[data-roblox-class]");
+      if (!button || button.dataset.robloxClass === state.robloxSubject) return;
+      applyRobloxSubject(button.dataset.robloxClass);
     });
+    renderRobloxLegend(model, "all");
   }
 
-  function renderRobloxAside(model) {
-    const n = model.correlationN;
+  function renderRobloxLegend(model, subject) {
+    const cls = model.classes.find((item) => item.name === subject);
+    const gradeColor = cls ? cls.color : "#1c1917";
+    const gradeLabel = subject === "all" ? "All classes" : subject;
+    const bars = uniqueSources(model).map((source) => `<span><i class="swatch" style="--c:${source.color}"></i>${esc(source.name)}</span>`).join("");
+    document.getElementById("roblox-legend").innerHTML = `<span><i class="swatch" style="--c:${gradeColor}"></i>${esc(gradeLabel)}</span>${bars}`;
+  }
+
+  function applyRobloxSubject(subject) {
+    const model = MODEL;
+    state.robloxSubject = subject;
+    const cls = model.classes.find((item) => item.name === subject);
+    const chart = state.charts.roblox;
+    if (chart) {
+      const line = chart.data.datasets.find((dataset) => dataset.yAxisID === "yGrade");
+      const color = cls ? cls.color : "#1c1917";
+      line.label = subject === "all" ? "All classes" : subject;
+      line.borderColor = color;
+      line.pointBorderColor = color;
+      line.data = model.weeks.map((week) => subjectGrade(week, subject)?.avg ?? null);
+      line.counts = model.weeks.map((week) => subjectGrade(week, subject)?.n || 0);
+      applyGradeScale(chart, "yGrade");
+      chart.stop();
+      chart.update("none");
+    }
+    document.querySelectorAll("#roblox-chips [data-roblox-class]").forEach((button) => {
+      button.setAttribute("aria-pressed", button.dataset.robloxClass === subject ? "true" : "false");
+    });
+    renderRobloxLegend(model, subject);
+    renderRobloxAside(model, subject);
+    renderRobloxTable(model, subject);
+    syncRobloxAria(model, subject);
+  }
+
+  function syncRobloxAria(model, subject) {
+    const stats = correlationFor(model, subject);
+    const who = subject === "all" ? "the weekly average across classes" : `${subject}'s weekly average`;
+    const canvas = document.getElementById("roblox-chart");
+    canvas.dataset.overlap = String(stats.n);
+    canvas.dataset.subject = subject;
+    document.body.dataset.overlap = String(stats.n);
+    canvas.setAttribute("aria-label", stats.n < 4
+      ? `Roblox hours and ${who} for this school year. Correlation is hidden because only ${stats.n} of 4 overlapping weeks are available.`
+      : `Roblox hours and ${who} for this school year. Correlation r is ${stats.r == null ? "not defined" : stats.r.toFixed(2)} across ${stats.n} weeks.`);
+  }
+
+  function renderRobloxAside(model, subject) {
+    const stats = correlationFor(model, subject || "all");
+    const n = stats.n;
+    const who = subject === "all" ? "the weekly average across classes" : `${subject}'s weekly average`;
     const paragraphs = [];
     let heading;
     if (n < 4) {
       heading = `Not enough weeks yet: ${n} of 4 needed; the chart fills in as weekly Roblox reports arrive`;
-    } else if (model.correlationR == null) {
+    } else if (stats.r == null) {
       heading = "These weeks do not vary enough to describe a correlation.";
     } else {
-      const r = model.correlationR;
+      const r = stats.r;
       heading = `r = ${r < 0 ? "−" : "+"}${Math.abs(r).toFixed(2)} · n = ${n} weeks`;
       const mag = Math.abs(r);
       const strength = mag < 0.2 ? "little linear relationship" : mag < 0.4 ? "a weak link" : mag < 0.7 ? "a moderate link" : "a strong link";
       if (mag < 0.2) {
-        paragraphs.push(`There is little linear relationship across these ${plural(n, "school week")}.`);
+        paragraphs.push(`There is little linear relationship between Windows PC hours and ${who}.`);
       } else {
         const direction = r < 0
-          ? "More Windows PC Roblox hours line up with lower weekly grades"
-          : "More Windows PC Roblox hours line up with higher weekly grades";
-        paragraphs.push(`${direction} (${strength}) across these ${plural(n, "school week")}.`);
+          ? `More Windows PC Roblox hours line up with a lower ${subject === "all" ? "weekly average" : subject + " average"}`
+          : `More Windows PC Roblox hours line up with a higher ${subject === "all" ? "weekly average" : subject + " average"}`;
+        paragraphs.push(`${direction} (${strength}).`);
       }
       paragraphs.push("Correlation is not causation, and this is a small sample.");
-      paragraphs.push("r uses Windows PC hours only. Those weeks have real dates and cover this school year. All-devices totals stay on the chart as a separate series.");
+      paragraphs.push(`r uses Windows PC hours and ${who}. Weeks with no grade for this selection are skipped. All-devices totals stay on the chart and are not part of r.`);
     }
     const blankWeeks = model.placed.filter((report) => report.primary && report.unknown).length;
     if (blankWeeks) {
@@ -1591,31 +1619,32 @@
     if (model.placed.some((report) => report.inferred)) {
       paragraphs.push("All-devices emails do not list dates. Each one is the 7 days ending the day before the email arrived.");
     }
-    const meter = n < 4 ? `<div class="meter" role="img" aria-label="${n} of 4 weeks with both grades and Roblox hours"><span style="width:${Math.max(6, (n / 4) * 100)}%"></span></div>` : "";
-    const table = overlapTable(model);
+    const meter = n < 4 ? `<div class="meter" role="img" aria-label="${n} of 4 weeks with both a grade and Windows PC hours"><span style="width:${Math.max(6, (n / 4) * 100)}%"></span></div>` : "";
+    const table = overlapTable(stats, subject || "all");
     document.getElementById("correlation").innerHTML = `
       <h3>${esc(heading)}</h3>
       ${meter}
       ${paragraphs.map((paragraph) => `<p>${esc(paragraph)}</p>`).join("")}
       ${table}
       <details class="fold"><summary>How correlation is calculated</summary>
-        <p class="fine">Pearson r compares the weekly grade average with Windows PC Roblox hours on school weeks that have both. It runs from −1 to 1. Blank PC weeks are skipped. All-devices hours are never added in. A number is shown once four overlapping weeks exist.</p>
+        <p class="fine">Pearson r compares ${esc(who)} with Windows PC Roblox hours on this school year’s weeks that have both. It runs from −1 to 1. Weeks with no grade for this selection are skipped, and blank PC weeks are not treated as zero. All-devices hours are never added in.</p>
       </details>`;
     document.getElementById("correlation").dataset.overlap = String(n);
   }
 
-  function overlapTable(model) {
-    if (!model.overlap.length) return "";
-    const rows = model.overlap.map((item) => {
+  function overlapTable(stats, subject) {
+    if (!stats.overlap.length) return "";
+    const gradeHeader = subject === "all" ? "All classes" : subject;
+    const rows = stats.overlap.map((item) => {
       const email = item.emails && item.emails[0];
       return [
         item.week.title,
-        fmtGrade(item.week.overall),
+        fmtGrade(item.grade.avg),
         formatMinutes(item.chosen.roblox_total_min),
         email ? formatMinutes(email.roblox_total_min) : "—"
       ];
     });
-    return `<div class="table-wrap">${tableHTML("School weeks in the correlation", ["Week", "Grade average", "Windows PC", "All devices"], rows)}</div>`;
+    return `<div class="table-wrap">${tableHTML("School weeks in the correlation", ["Week", gradeHeader, "Windows PC", "All devices"], rows)}</div>`;
   }
 
   function tableHTML(caption, headers, rows) {
@@ -1655,14 +1684,12 @@
     }).join("");
   }
 
-  function renderRobloxTable(model) {
-    const headers = ["Week", "Overall", "Assignments", ...model.classes.map((cls) => cls.name), ...uniqueSources(model).map((source) => source.name)];
+  function renderRobloxTable(model, subject) {
+    const gradeHeader = subject === "all" ? "All classes" : subject;
+    const headers = ["Week", gradeHeader, "Assignments", ...uniqueSources(model).map((source) => source.name)];
     const rows = model.weeks.map((week) => {
-      const cells = [week.title, week.overall == null ? "—" : fmtGrade(week.overall), String(week.overallN)];
-      model.classes.forEach((cls) => {
-        const score = week.byClass[cls.name];
-        cells.push(score && score.avg != null ? fmtGrade(score.avg) : "—");
-      });
+      const grade = subjectGrade(week, subject);
+      const cells = [week.title, grade ? fmtGrade(grade.avg) : "—", grade ? String(grade.n) : "0"];
       uniqueSources(model).forEach((source) => {
         const hit = model.placed.find((report) => report.source === source.source && report.weekKey === week.key);
         cells.push(hit && hit.hours != null ? formatMinutes(hit.roblox_total_min) : "—");
@@ -1670,7 +1697,7 @@
       return cells;
     });
     document.getElementById("roblox-table").innerHTML = rows.length
-      ? tableHTML("Weekly grade averages and Roblox hours", headers, rows)
+      ? tableHTML(`Weekly ${gradeHeader} average and Roblox hours`, headers, rows)
       : "<p>No dated assignments yet.</p>";
   }
 

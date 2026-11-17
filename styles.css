@@ -428,6 +428,22 @@ section { padding: 34px 0 8px; scroll-margin-top: 74px; }
 
 .chip[aria-pressed="false"] .swatch { opacity: 0.45; }
 
+.legend-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  margin: 0;
+}
+
+.legend-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
 .fine { font-size: 0.86rem; margin-top: 8px; }
 
 .report-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-top: 14px; }
